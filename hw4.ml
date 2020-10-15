@@ -79,10 +79,13 @@ let rec fib_I (n: int) : fib_result =
 
 let fib_memo (n: int) : int =
   let rec fib n =
-    raise NotImplemented
-  in match Hashtbl.find_opt store n with
-  | Some(v) -> v
-  | None -> let v = fib n in Hashtbl.add store n v; v
+    match Hashtbl.find_opt store n with
+    | Some(v) -> v
+    | None -> 
+        if n = 0 then (Hashtbl.add store 0 0; 0) else 
+        if n = 1 then (Hashtbl.add store 1 1; 1) else 
+        let v = fib (n-2) + fib (n-1) in Hashtbl.add store n v; v
+  in fib n
 ;;
 
 (* Q 2.3 : General memoization function *)
