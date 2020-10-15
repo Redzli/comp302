@@ -91,11 +91,30 @@ let fib_memo (n: int) : int =
 (* Q 2.3 : General memoization function *)
 
 let memo (f: (('a -> 'b) -> 'a -> 'b)) (stats: stats) : ('a -> 'b) =
-  raise NotImplemented
+  let entries = stats.entries in
+  let lookup = stats.lkp in
+  let table = ref (Hashtbl.create 1000) in
+  let rec g (input: 'a): 'b =
+    match Hashtbl.find_opt !table input with
+    | Some(v) -> (lookup := !lookup+1; v)
+    | None -> 
+        entries := !entries+1; 
+        let v = f g input in Hashtbl.add !table input v; v
+  in g
 ;;
 
 (* Q 2.4 : Using memo to efficiently compute the Fibonacci number *)
-(* We also accept let fibM = raise NotImplemented ;; *)
-let fibM (n: int) : (int * stats) =
-  raise NotImplemented
+
+let fibM: (int -> (int * stats)) =
+  let info = {
+    entries = ref 0;
+    lkp = ref 0;
+  } in
+  let f (g: (int -> int)) (x: int): int = 
+    if x = 0 then 0 else
+    if x = 1 then 1 else
+      g(x-2) + g(x-1)
+  in 
+  let memoFib = memo f info in
+  fun n -> (memoFib n, info)
 ;;
