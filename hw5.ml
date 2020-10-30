@@ -49,9 +49,8 @@ let find_path (g: 'a graph) (a: 'a) (b: 'a) : ('a list * weight) =
   let rec aux_node (node: 'a * weight) (visited : 'a list) (acc: weight): ('a list * weight) =
     let (v,w) = node in 
     if (List.mem v visited) then raise Fail
-    else
-      if (v = b) then (visited@[v], acc+w)    (*TODO*)
-      else aux_list (neighbours g v) (visited@[v]) (acc+w);
+    else if (v = b) then (visited@[v], acc+w)
+    else aux_list (neighbours g v) (visited@[v]) (acc+w);
   and aux_list (nodes: ('a * weight) list) (visited: 'a list) (acc: weight) : ('a list * weight) =
     match nodes with
     | [] -> raise Fail
@@ -61,24 +60,37 @@ let find_path (g: 'a graph) (a: 'a) (b: 'a) : ('a list * weight) =
 
 (* TODO: Implement find_path'. *)
 let find_path' (g: 'a graph) (a: 'a) (b: 'a) : ('a list * weight) =
-  let rec aux_node (node: 'a * weight) (visited : 'a list) fc sc : ('a list * weight)=
-    raise NotImplemented
-  and aux_list (nodes: ('a * weight) list) (visited: 'a list) fc sc : ('a list * weight) =
-    raise NotImplemented
+  let rec aux_node (node: 'a * weight) (visited : 'a list) (acc: weight) fc sc : ('a list * weight)=
+    let (v,w) = node in 
+    if (List.mem v visited) then fc ()
+    else if (v = b) then sc (visited@[v], acc+w)
+    else aux_list (neighbours g v) (visited@[v]) (acc+w) fc sc;
+  and aux_list (nodes: ('a * weight) list) (visited: 'a list) (acc: weight) fc sc : ('a list * weight) =
+    match nodes with
+    | [] -> fc ()
+    | h::t -> aux_node h visited acc (fun () -> aux_list t visited acc fc sc) sc
   in
-  raise NotImplemented
-
+  aux_node (a,0) [] 0 (fun () -> raise Fail) (fun (l,w) -> (l,w))
 
 (* TODO: Implement find_all_paths *)
 let find_all_paths (g: 'a graph) (a: 'a) (b: 'a) : ('a list * weight) list = 
-  let rec aux_node (node: 'a * weight) (visited : 'a list) : ('a list * weight) list =
-    raise NotImplemented  
-  and aux_list (nodes: ('a * weight) list) (visited: 'a list) : ('a list * weight) list =
-    raise NotImplemented  
+  let rec aux_node (node: 'a * weight) (visited : 'a list) (acc: weight) : ('a list * weight) list =
+    let (v,w) = node in 
+    if (List.mem v visited) then []
+    else if (v = b) then [(visited@[v], acc+w)]
+    else aux_list (neighbours g v) (visited@[v]) (acc+w);
+  and aux_list (nodes: ('a * weight) list) (visited: 'a list) (acc: weight) : ('a list * weight) list =
+    match nodes with
+    | [] -> []
+    | h::t -> (aux_node h visited acc)@(aux_list t visited acc)
   in
-  raise NotImplemented  
-
+  aux_node (a,0) [] 0
 
 (* TODO: Implement find_shortest_path *)
 let find_shortest_path (g: 'a graph) (a: 'a) (b: 'a) : ('a list * weight) option = 
-  raise NotImplemented    
+  let f (best) (l,w) = 
+    match best with
+    | None -> Some(l,w)
+    | Some(minPath, minWeight) -> if (w < minWeight) then Some(l,w) else Some(minPath, minWeight)
+  in 
+  List.fold_left f None (find_all_paths g a b)
