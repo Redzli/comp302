@@ -18,8 +18,8 @@ let rec parseExp (toklist: token list) (sc: (token list -> exp -> 'a)) : 'a =
   parseSExp
     toklist
     (fun toklist' exp -> match toklist' with
-       | SEMICOLON :: toklist'' -> sc toklist'' exp
-       | _ -> raise (Error "Expected a single semicolon"))
+      | SEMICOLON :: toklist'' -> sc toklist'' exp
+      | _ -> raise (Error "Expected a single semicolon"))
 
 and parseSExp (toklist: token list) (sc: (token list -> exp -> 'a)) : 'a =
   parsePExp
@@ -44,21 +44,6 @@ and parseAtom (toklist: token list) (sc: (token list -> exp -> 'a)) : 'a =
       | RPAREN :: t -> sc t exp
       | _ -> raise (Error "Expected a closing parenthesis"))
   | _ -> raise (Error "List must begin with INT or LPAREN")
-
-
-
-parseAtom ([INT 3]) (fun toklist exp -> exp)
-
-let rec parseAtom (toklist: token list) (sc: (token list -> exp -> 'a)) : 'a =
-  match toklist with
-  | INT :: toklist'' -> sc toklist'' (Int)
-  |
-  
-  parseAtom
-    toklist
-    (fun toklist' exp -> match toklist' with
-    | INT :: toklist'' -> sc toklist'' (Int)
-    | [] -> exp)
 
 (* parse : string -> exp *)
 let parse string =
