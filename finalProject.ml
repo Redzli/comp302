@@ -203,11 +203,20 @@ and
 
 
 let eval_tests : (exp * exp) list = [
+  (*(parse_toExp valid_program_1, expected);*)
+  (parse_toExp valid_program_2, Int 133);
+  (parse_toExp valid_program_3, Int 120);
+  (parse_toExp valid_program_4, Int 3);
+  (parse_toExp valid_program_5, Int 6);
+  (parse_toExp valid_program_6, Int 6);
+  (parse_toExp valid_program_7, Int 4);
+  (parse_toExp valid_program_8, Int 900);
+  (parse_toExp valid_program_9, Int 1600);
+  (parse_toExp valid_program_10, Int 10);
 ]
 
 let weave (xs: name list) (vs: exp list) : (exp * name) list =
-  let f (x: name) (v: exp) : (exp * name) = (v,x)
-  in List.map2 f xs vs
+  List.map2 (fun x v -> (v,x)) xs vs
 
 (* Q4  : Evaluate an expression in big-step *)
 let rec eval : exp -> exp =
@@ -236,14 +245,35 @@ let rec eval : exp -> exp =
       | Anno (e, _) -> eval e     (* types are ignored in evaluation *)
       | Var x -> stuck ("Free variable \"" ^ x ^ "\" during evaluation")
 
-      | Fn (x, t, e) -> raise NotImplemented
-      | Apply (e1, e2) -> raise NotImplemented
-      | Rec (f, t, e) -> raise NotImplemented
+      | Fn (x, t, e) -> Fn (x, t, e)
+      | Apply (e1, e2) -> 
+          let v2 = eval e2 in 
+          begin match e1 with
+            | Fn (x, t, e) -> eval (subst (v2, x) e)
+            | Rec (f, t, e) -> eval (Apply ((eval (Rec (f, t, e))), v2))
+            | Apply (e1, e2) -> eval ( Apply((eval (Apply (e1, e2))), v2) )
+            | _ -> stuck "Given expressions cannot be applied"
+          end
+      | Rec (f, t, e) -> eval (subst (Rec (f, t, e), f) e)
 
       | Primop (And, es) ->
-          raise NotImplemented
+          begin match es with
+            | [e1; e2] -> 
+                begin match eval e1 with
+                  | Bool b -> if b then eval e2 else Bool (false)
+                  | _      -> stuck "Condition for AND operation should be of the type bool"
+                end
+            | _ -> stuck "AND operation requires two arguments"
+          end
       | Primop (Or, es) ->
-          raise NotImplemented
+          begin match es with
+            | [e1; e2] -> 
+                begin match eval e1 with
+                  | Bool b -> if b then Bool (true) else eval e2
+                  | _      -> stuck "Condition for OR operation should be of the type bool"
+                end
+            | _    -> stuck "OR operation requires two arguments"
+          end
       | Primop (op, es) ->
           let vs = List.map eval es in
           begin match eval_op op vs with
