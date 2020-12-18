@@ -308,6 +308,35 @@ let rec eval : exp -> exp =
     result
 
 
+let unify_tests : ((typ * typ) * unit) list = [
+  ((TInt, TBool),());
+]
+
+let rec typeAssign (var: typ) (set: typ) : unit =
+  match var with
+  | TVar a -> a:= Some(set)
+  | _ -> ()
+
+let rec typeFlat (var: typ) : typ =
+  match var with
+  | TVar {contents = Some t} -> typeFlat t
+  | _ -> var
+
+(* find the next function for Q5 *)
+(* Q6  : Unify two types *)
+let rec unify (ty1 : typ) (ty2 : typ) : unit =
+  match (ty1, ty2) with
+  | (TInt, TInt)   -> ()
+  | (TBool, TBool) -> ()
+  | (TArrow(t1, t2), TArrow(s1, s2))   -> unify t1 s1; unify t2 s2;
+  | (TProduct(tList), TProduct(sList)) -> List.iter2 unify tList sList
+  | (TVar {contents = None}, _)   -> typeAssign ty1 ty2
+  | (_, TVar {contents = None})   -> typeAssign ty2 ty1
+  | (TVar {contents = Some t}, _) -> unify (typeFlat ty1) ty2
+  | (_, TVar {contents = Some t}) -> unify ty1 (typeFlat ty2)
+  | _ -> type_fail "Non-unifiable constraints"
+
+
 let infer_tests : ((context * exp) * typ) list = [
   ((Ctx [], toExp valid_program_1), TInt);
   ((Ctx [], toExp valid_program_2), TInt);
@@ -321,6 +350,7 @@ let infer_tests : ((context * exp) * typ) list = [
   ((Ctx [], toExp valid_program_10), TInt);
 ]
 
+(*
 let rec typeToString (t: typ) =
   match t with
   | TArrow   (a, b)   -> typeToString(a) ^ " -> " ^ typeToString(b)
@@ -334,6 +364,7 @@ let rec printContext (ctx: (name * typ) list) : unit =
   match ctx with
   | [] -> Printf.printf "\n";
   | (n, t)::rest -> let t = typeToString t in Printf.printf "%s, %s; " n t; printContext rest
+*)
 
 (* Q5  : Type an expression *)
 (* Q7* : Implement the argument type inference
@@ -397,7 +428,9 @@ let rec infer (ctx : context) (e : exp) : typ =
   | Fn (x, t, e)    ->
       begin match t with
       | Some (tau) -> let tau' = infer (extend ctx (x, tau)) e in TArrow (tau, tau')
-      | None -> type_fail "No type annotation given for function"
+      | None       -> let tau  = fresh_tvar () in
+                      let tau' = infer (extend ctx (x, tau)) e in
+                      TArrow (tau, tau')
       end
   | Rec (f, t, e)   -> infer (extend ctx (f, t)) e
   | Apply (e1, e2)  -> let tau = infer ctx e2 in
@@ -423,14 +456,6 @@ and inferDecs (gamma: context) (acc: context) (ds: dec list) : context =
   | dec::rest -> let Ctx (gamma1) = inferDec gamma dec in 
                  inferDecs (extend_list gamma gamma1) (extend_list acc gamma1) rest
   | [] -> acc
-
-
-let unify_tests : ((typ * typ) * unit) list = [
-]
-
-(* find the next function for Q5 *)
-(* Q6  : Unify two types *)
-let unify (ty1 : typ) (ty2 : typ) : unit = raise NotImplemented
 
 
 (* Now you can play with the language that you've implemented! *)
