@@ -348,82 +348,46 @@ let infer_tests : ((context * exp) * typ) list = [
   ((Ctx [], toExp valid_program_8), TInt);
   ((Ctx [], toExp valid_program_9), TInt);
   ((Ctx [], toExp valid_program_10), TInt);
+
+  ((Ctx [], toExp "fn x => x * x;"), TArrow (TInt, TInt));
+  ((Ctx [], toExp "fn x => fn y => x * y;"), TArrow (TArrow (TInt, TInt), TInt));
 ]
 
 (*
-let rec typeToString (t: typ) =
-  match t with
-  | TArrow   (a, b)   -> typeToString(a) ^ " -> " ^ typeToString(b)
-  | TProduct (a::b::t)-> typeToString(a) ^ " * " ^ typeToString(TProduct (b::t))
-  | TProduct (b::[])  -> typeToString(b)
-  | TInt              -> "int"
-  | TBool             -> "bool"
-  | _                 -> ""
-
 let rec printContext (ctx: (name * typ) list) : unit =
   match ctx with
   | [] -> Printf.printf "\n";
-  | (n, t)::rest -> let t = typeToString t in Printf.printf "%s, %s; " n t; printContext rest
+  | (n, t)::rest -> let t = Print.typ_to_string t in Printf.printf "%s, %s; " n t; printContext rest
 *)
 
 (* Q5  : Type an expression *)
-(* Q7* : Implement the argument type inference
-         For this question, move this function below the "unify". *)
+(* Q7* : Implement the argument type inference *)
 let rec infer (ctx : context) (e : exp) : typ =
+  (*let Ctx (list) = ctx in printContext (list);*)
   match e with
   | Int _  -> TInt
   | Bool _ -> TBool
   | Var x  -> ctx_lookup ctx x
 
-  | If (e, e1, e2)  ->
-      let (e1T,e2T) = (infer ctx e1, infer ctx e2) in 
-      if (infer ctx e = TBool) then
-        if (typ_eq e1T e2T) then e1T
-        else type_fail "If statement branches must have the same type"
-      else type_fail "If statement guard must have type bool"
   | Primop (op, l)  ->
       begin match (op, l) with
-        | (Equals,       [e1; e2])   -> 
-            if (infer ctx e1 = TInt) && (infer ctx e2 = TInt) 
-            then TBool else type_fail "Equals: Inputs must have type int"
-        | (NotEquals,    [e1; e2])   -> 
-            if (infer ctx e1 = TInt) && (infer ctx e2 = TInt) 
-            then TBool else type_fail "NotEquals: Inputs must have type int"
-        | (LessThan,     [e1; e2])   -> 
-            if (infer ctx e1 = TInt) && (infer ctx e2 = TInt) 
-            then TBool else type_fail "LessThan: Inputs must have type int"
-        | (LessEqual,    [e1; e2])   -> 
-            if (infer ctx e1 = TInt) && (infer ctx e2 = TInt) 
-            then TBool else type_fail "LessEqual: Inputs must have type int"
-        | (GreaterThan,  [e1; e2])   -> 
-            if (infer ctx e1 = TInt) && (infer ctx e2 = TInt) 
-            then TBool else type_fail "GreaterThan: Inputs must have type int"
-        | (GreaterEqual, [e1; e2])   -> 
-            if (infer ctx e1 = TInt) && (infer ctx e2 = TInt) 
-            then TBool else type_fail "GreaterEqual: Inputs must have type int"
-        | (Plus,         [e1; e2])   -> 
-            if (infer ctx e1 = TInt) && (infer ctx e2 = TInt) 
-            then TInt else type_fail "Plus: Inputs must have type int"
-        | (Minus,        [e1; e2])   -> 
-            if (infer ctx e1 = TInt) && (infer ctx e2 = TInt) 
-            then TInt else type_fail "Minus: Inputs must have type int"
-        | (Times,        [e1; e2])   -> 
-            if (infer ctx e1 = TInt) && (infer ctx e2 = TInt) 
-            then TInt else type_fail "Times: Inputs must have type int"
-        | (Div,          [e1; e2])   -> 
-            if (infer ctx e1 = TInt) && (infer ctx e2 = TInt) 
-            then TInt else type_fail "Div: Inputs must have type int"
-        | (And,          [e1; e2])   -> 
-            if (infer ctx e1 = TBool) && (infer ctx e2 = TBool) 
-            then TBool else type_fail "And: Inputs must have type bool"
-        | (Or,           [e1; e2])   -> 
-            if (infer ctx e1 = TBool) && (infer ctx e2 = TBool) 
-            then TBool else type_fail "Or: Inputs must have type bool"
-        | (Negate,       [e])        -> 
-            if (infer ctx e = TInt) 
-            then TInt else type_fail "Negate: Input must have type int"
+        | (And,          [e1; e2])   -> unify (infer ctx e1) TBool; unify (infer ctx e2) TBool; TBool
+        | (Or,           [e1; e2])   -> unify (infer ctx e1) TBool; unify (infer ctx e2) TBool; TBool
+        | (Equals,       [e1; e2])   -> unify (infer ctx e1) TInt; unify (infer ctx e2) TInt; TBool
+        | (NotEquals,    [e1; e2])   -> unify (infer ctx e1) TInt; unify (infer ctx e2) TInt; TBool
+        | (LessThan,     [e1; e2])   -> unify (infer ctx e1) TInt; unify (infer ctx e2) TInt; TBool
+        | (LessEqual,    [e1; e2])   -> unify (infer ctx e1) TInt; unify (infer ctx e2) TInt; TBool
+        | (GreaterThan,  [e1; e2])   -> unify (infer ctx e1) TInt; unify (infer ctx e2) TInt; TBool
+        | (GreaterEqual, [e1; e2])   -> unify (infer ctx e1) TInt; unify (infer ctx e2) TInt; TBool
+        | (Plus,         [e1; e2])   -> unify (infer ctx e1) TInt; unify (infer ctx e2) TInt; TInt
+        | (Minus,        [e1; e2])   -> unify (infer ctx e1) TInt; unify (infer ctx e2) TInt; TInt
+        | (Times,        [e1; e2])   -> unify (infer ctx e1) TInt; unify (infer ctx e2) TInt; TInt
+        | (Div,          [e1; e2])   -> unify (infer ctx e1) TInt; unify (infer ctx e2) TInt; TInt
+        | (Negate,       [e])        -> unify (infer ctx e) TInt; TInt
         | _ -> type_fail "Incorrect number of arguments for primitive operation"
       end
+  | If (e, e1, e2)  -> let (e1T,e2T) = (infer ctx e1, infer ctx e2) in 
+      unify (infer ctx e) TBool; unify (e1T) (e2T); e1T
   | Tuple (list)    -> TProduct (List.map (infer ctx) list)
   | Fn (x, t, e)    ->
       begin match t with
@@ -435,10 +399,10 @@ let rec infer (ctx : context) (e : exp) : typ =
   | Rec (f, t, e)   -> infer (extend ctx (f, t)) e
   | Apply (e1, e2)  -> let tau = infer ctx e2 in
       begin match infer ctx e1 with
-      | TArrow (t,t') -> if (t = tau) then t' else type_fail "Function argument is of incorrect type"
+      | TArrow (t,t') -> unify (t) (tau); t'
       | _ -> type_fail "Expression is not a function, it cannot be applied"
       end
-  | Anno (e, t)     -> if (infer ctx e) = t then t else type_fail "Annotation and expression type mismatch"
+  | Anno (e, t)     -> unify (infer ctx e) (t); t
   | Let (ds, e)     -> let Ctx (gamma') = inferDecs ctx (Ctx []) ds in infer (extend_list ctx gamma') e
 and inferDecs (gamma: context) (acc: context) (ds: dec list) : context =
   let inferDec (ctx: context) (d: dec) : context =
@@ -496,7 +460,6 @@ let run_test name f ts stringify : unit =
   List.iteri
     begin fun idx (input, expected_output) ->
       try
-        reset_ctr();
         let output = f input in
         if output <> expected_output then
           begin
