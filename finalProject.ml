@@ -1,18 +1,6 @@
 (* Q0  : Get familiar with the external syntax of MiniML *)
 let parse_tests : (string * (string, exp) either) list = [
     (* Provide your tests for the parser *)
-  ("1;", Right (Int 1));
-  (valid_program_1, Right
-     (Let
-        ([Val
-            (Rec ("apply", TArrow (TArrow (TInt, TInt), TArrow (TInt, TInt)),
-                  Fn
-                    ("f", Some (TArrow (TInt, TInt)),
-                     Fn ("x", Some TInt, Apply (Var "f", Var "x")))),
-             "apply")],
-         Apply
-           (Apply (Var "apply", Fn ("x", None, Primop (Times, [Var "x"; Int 3]))),
-            Int 100))))
 ]
 
 
