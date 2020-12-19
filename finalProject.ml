@@ -337,8 +337,10 @@ let infer_tests : ((context * exp) * typ) list = [
   ((Ctx [], toExp valid_program_9), TInt);
   ((Ctx [], toExp valid_program_10), TInt);
 
-  ((Ctx [], toExp "fn x => x * x;"), TArrow (TInt, TInt));
-  ((Ctx [], toExp "fn x => fn y => x * y;"), TArrow (TArrow (TInt, TInt), TInt));
+  ((Ctx [], toExp "fn x => x * x;"), 
+   TArrow (TVar {contents = Some TInt}, TInt));
+  ((Ctx [], toExp "fn x => fn y => x * y;"), 
+   TArrow (TVar {contents = Some TInt}, TArrow (TVar {contents = Some TInt}, TInt)));
 ]
 
 (*
@@ -385,9 +387,12 @@ let rec infer (ctx : context) (e : exp) : typ =
                       TArrow (tau, tau')
       end
   | Rec (f, t, e)   -> infer (extend ctx (f, t)) e
-  | Apply (e1, e2)  -> let tau = infer ctx e2 in
-      begin match infer ctx e1 with
+  | Apply (e1, e2)  -> let tau = infer ctx e2 in let funcType = typeFlat (infer ctx e1) in
+      begin match funcType with
       | TArrow (t,t') -> unify (t) (tau); t'
+      | TVar _        -> let t = fresh_tvar() in
+                         let t' = fresh_tvar() in
+                         unify (t) (tau); unify (funcType) (TArrow(t,t')); t'
       | _ -> type_fail "Expression is not a function, it cannot be applied"
       end
   | Anno (e, t)     -> unify (infer ctx e) (t); t
@@ -396,10 +401,12 @@ and inferDecs (gamma: context) (acc: context) (ds: dec list) : context =
   let inferDec (ctx: context) (d: dec) : context =
     match d with
     | Val (e, x)       -> Ctx [x, infer ctx e]
-    | Valtuple (e, xs) -> 
-        begin match (infer ctx e) with
+    | Valtuple (e, xs) -> let typE = typeFlat (infer ctx e) in
+        begin match typE with
         | TProduct (ts) -> (try Ctx (List.map2 (fun x t -> (x,t)) xs ts)
                            with Invalid_argument _ -> type_fail "Tuple length mismatch in Let binding")
+        | TVar _        -> let ts = List.map (fun x -> fresh_tvar()) xs in 
+                           unify typE (TProduct (ts)); Ctx (List.map2 (fun x t -> (x,t)) xs ts)
         | _ ->  type_fail "Expression in Let binding must evaluate to a tuple"
         end
     | ByName (e, x)    -> Ctx [x, infer ctx e]
@@ -408,7 +415,6 @@ and inferDecs (gamma: context) (acc: context) (ds: dec list) : context =
   | dec::rest -> let Ctx (gamma1) = inferDec gamma dec in 
                  inferDecs (extend_list gamma gamma1) (extend_list acc gamma1) rest
   | [] -> acc
-
 
 (* Now you can play with the language that you've implemented! *)
 let execute (s: string) : unit =

@@ -215,3 +215,59 @@ in
   f 55
 end;
 "
+
+let valid_program_11 = "(
+fn a => 
+let 
+  val (x,y) = a 
+in 
+  x * x * y
+end )
+(5,3);"
+
+let valid_program_12 = "(
+fn a => fn b =>
+let 
+  val (x,y) = a 
+  val z = b 
+in 
+  x * x * y + z 
+end )
+(5,3) 23;"
+
+let valid_program_13 = "(
+fn a => fn b =>
+let 
+  val (x,y) = a 
+  val (w,z) = b 
+in 
+  x * x * y + w * w * z
+end )
+(5,3) (2,3);"
+
+let valid_program_14 = "(
+fn a => fn b =>
+let 
+  val (x,y) = a 
+  val (w,z) = b 
+in 
+  (x || y) && (w || z)
+end )
+(true,false) (false,true);"
+
+let valid_program_15 = "(
+fn b => fn a =>
+let 
+  val (x,y) = a 
+  val z = b 
+in 
+  (x || y) && z
+end )
+true (false,false);"
+
+let valid_program_16 = "
+let 
+  val apply = fn f => f 6 
+in 
+  apply (fn x => x + 3) 
+end;"
